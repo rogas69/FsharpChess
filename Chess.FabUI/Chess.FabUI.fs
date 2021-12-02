@@ -1,11 +1,16 @@
 ﻿namespace Chess.FabUI
 
 open System.Diagnostics
-open Fabulous.Core
-open Fabulous.DynamicViews
+open Fabulous
+open Fabulous.XamarinForms
+open Fabulous.XamarinForms.LiveUpdate
 open Xamarin.Forms
 open Chess.Domain
 open Chess.Domain.Entities
+open Xamarin.Forms.PlatformConfiguration
+open System.Reflection
+open System.IO
+
 
 module App = 
     type Model = 
@@ -15,6 +20,15 @@ module App =
     type Msg = 
         /// User will pick a "from" cell, and then a "to" cell.
         | PickCell of Cell
+
+    let getImageBytes filename =
+        match filename with
+        | "" -> null
+        | _ -> let assembly = IntrospectionExtensions.GetTypeInfo(typedefof<Model>).Assembly;
+               use stream = assembly.GetManifestResourceStream(filename);
+               use reader = new BinaryReader(stream)
+               reader.ReadBytes(int stream.Length)
+               
 
     let init () = 
         { GameState = Implementation.initGame(); FromCell = None }, Cmd.none
@@ -51,24 +65,24 @@ module App =
                 for row, rowIdx in indexedRows do 
                     yield { Col = col; Row = row }, (colIdx, rowIdx) ]
 
+        
         let imageForPiece pieceOpt = 
             match pieceOpt with
             | Some (color, rank) -> 
                 let colorStr = match color with | White -> "white" | Black -> "black"
                 let rankStr = match rank with | Pawn _ -> "pawn" | Rook -> "rook" | Bishop -> "bishop" | King -> "king" | Queen -> "queen" | Knight -> "knight"
-                sprintf "Images/pieces_%s/%s.png" colorStr rankStr
+                sprintf "Chess.FabUI.Resources.pieces_%s.%s.png" colorStr rankStr
             
             | None -> ""
 
         View.ContentPage(
-            StackLayout.stackLayout [ // <-- Fabulous.SimpleElements nuget package
-                StackLayout.Children [
-                    Grid.grid [
-                        Grid.Rows ([ for n in 1..8 -> 50. ] |> List.map GridLength)
-                        Grid.Columns ([ for n in 1..8 -> 50. ] |> List.map GridLength)
-                        Grid.ColumnSpacing 0.
-                        Grid.RowSpacing 0.
-                        Grid.Children [                            
+            content = View.StackLayout( children = [ // <-- Fabulous.SimpleElements nuget package
+                    View.Grid( 
+                        rowdefs = [ for n in 1..8 -> Absolute 50. ],
+                        coldefs = [ for n in 1..8 -> Absolute 50. ], 
+                        columnSpacing = 0.,
+                        rowSpacing = 0.,
+                        children = [
                             for (cell, (colIdx, rowIdx)) in indexedCells do
                                 let bgColor = getCellBgColor cell colIdx rowIdx
                                 let borderColor = getCellBorderColor cell
@@ -79,36 +93,33 @@ module App =
                                     backgroundColor = bgColor,
                                     borderColor = borderColor,
                                     gestureRecognizers = [onTap]
-                                ).GridColumn(colIdx).GridRow(rowIdx)
+                                ).Row(rowIdx).Column(colIdx)
 
                                 yield View.Image(
-                                    source = imageSource,
+                                    source = Image.fromBytes (getImageBytes imageSource),
                                     gestureRecognizers = [onTap]
-                                ).GridColumn(colIdx).GridRow(rowIdx)
-                        ]
-                    ]
+                                ).Row(rowIdx).Column(colIdx)
+                            ]
+                    )
 
-                    Label.label [ Label.Text model.GameState.Message ]
+                    View.Label( text = model.GameState.Message )
                 ]
-            ]
+            )
         )
 
     // Note, this declaration is needed if you enable LiveUpdate
-    let program = Program.mkProgram init update view
+    let program = XamarinFormsProgram.mkProgram init update view
 
 
 
 
 type App () as app = 
     inherit Application ()
-
+    
     let runner = 
         App.program
-#if DEBUG
-        |> Program.withConsoleTrace
-#endif
-        |> Program.runWithDynamicView app
-
+        |> XamarinFormsProgram.run app
+    
 #if DEBUG
     // Uncomment this line to enable live update in debug mode. 
     // See https://fsprojects.github.io/Fabulous/tools.html for further  instructions.
