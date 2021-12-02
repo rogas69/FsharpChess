@@ -1,4 +1,4 @@
-This is a fork from the [JordanMarr/FsharpChess](JordanMarr/FsharpChess) project.  
+This is a fork from the [JordanMarr/FsharpChess](https://github.com/JordanMarr/FsharpChess) project.  
 I updated the [Fabulous](https://github.com/fsprojects/Fabulous) framework to its most recent version in the project Chess.FabUI.Android and fixed the display of chess pieces.  
 
 The application looks like this on the emulator:  
